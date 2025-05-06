@@ -1,0 +1,276 @@
+from OpenGL.GL import *
+from OpenGL.GLUT import *
+from OpenGL.GLU import *
+import math
+import random
+
+
+
+
+def draw_points(x, y):
+    glPointSize(2)
+    glBegin(GL_POINTS)
+    glVertex2f(x,y) 
+    glEnd()
+
+def find_zone(x0,x1,y0,y1):
+    dx = x1-x0
+    dy = y1-y0
+
+    zone = -1
+
+    if abs(dx)>abs(dy):
+        if dx>=0 and dy>=0:
+            zone = 0
+        elif dx<0  and dy>=0:
+            zone = 3
+        elif dx<0  and dy<0:
+            zone = 4
+        elif dx>=0  and dy<0:
+            zone = 7
+        
+    else:
+        if dx>=0 and dy>=0:
+            zone = 1
+        elif dx<0  and dy>=0:
+            zone = 2
+        elif dx<0  and dy<0:
+            zone = 5
+        elif dx>=0  and dy<0:
+            zone = 6
+
+    return zone
+def convert_zone_zero(zone,x,y):
+    if zone == 0:
+        return x,y
+    elif zone == 1:
+        return y,x
+    elif zone == 2:
+        return y,-x
+    elif zone == 3:
+        return -x,y
+    elif zone == 4:
+        return -x,-y
+    elif zone == 5:
+        return -y,-x
+    elif zone == 6:
+        return -y,x
+    elif zone == 7:
+        return x,-y
+
+def convert_original(zone,x,y):
+    if zone == 0:
+        return x, y
+    elif zone == 1:
+        return y, x
+    elif zone == 2:
+        return -y, x
+    elif zone == 3:
+        return -x, y
+    elif zone == 4:
+        return -x, -y
+    elif zone == 5:
+        return -y, -x
+    elif zone == 6:
+        return y, -x
+    elif zone == 7:
+        return x, -y
+    
+def midpoint_algo(startx,starty,endx,endy,zone):
+    dx = endx-startx
+    dy = endy-starty
+
+    d = (2*dy)-dx
+    x = startx
+    y = starty
+
+    while x<=endx:
+        org_x,org_y = convert_original(zone,x,y)
+        draw_points(org_x,org_y)
+
+        if d>0: #NE
+            x+=1
+            y+=1
+            d+= (2*(dy-dx))
+        elif d<=0:
+            x+=1
+            d+= (2*dy)
+
+
+
+
+def eightway(x0,x1,y0,y1):
+    zone = find_zone(x0,x1,y0,y1)
+    startx,starty = convert_zone_zero(zone,x0,y0)
+    endx,endy = convert_zone_zero(zone,x1,y1)
+    midpoint_algo(startx,starty,endx,endy,zone)
+
+
+game = False
+diamond_x = x = random.randrange(35,570)
+diamond_y = 660
+size = 25
+diamond_color = [random.random() ,random.random(), random.random()]
+
+catcher_width = 130
+catch_x = 210
+def drawcatcher():
+    global catcher_width,catch_x,game 
+    if game:
+        glColor3f(1.0, 0.0, 0.0)  
+    else:
+        glColor3f(1, 1, 1)
+    eightway(catch_x ,catch_x+catcher_width,30,30)
+    eightway(catch_x ,catch_x+20,30,10)
+    eightway(catch_x+20,catch_x+catcher_width-20,10,10)
+    eightway(catch_x+catcher_width-20,catch_x+catcher_width,10,30)
+
+def cross_func() :
+
+    glColor3f(1.0,0.0,0.0)
+    eightway(460,480,697,665)
+    eightway(460,480,665,697)
+
+def pause():
+    
+    glColor3f(1,1.0,0)
+    eightway(250,250,697,660)
+    eightway(275,275,660,697)
+
+def back():
+    
+    glColor3f(0,1,1)
+    eightway(30,60,675,675)
+    eightway(30,40,675,695)
+    eightway(30,40,675,655)
+def play():
+    glColor3f(1,1.0,0)
+    eightway(275,250,697,675)
+    eightway(275,275,660,697)
+    eightway(275,250,660,675)
+
+def diamond():
+    global size,diamond_y, diamond_x,diamond_color
+    if diamond_color == [0,0,0]:
+        glColor3f(1,1,1)
+    else:
+
+        glColor3f(*diamond_color)
+    eightway(diamond_x,diamond_x-7,diamond_y,diamond_y-(size/2))
+    eightway(diamond_x-7,diamond_x,diamond_y-(size/2),diamond_y-size)
+    eightway(diamond_x,diamond_x+7,diamond_y-size,diamond_y-(size/2))
+    eightway(diamond_x+7,diamond_x,diamond_y-(size/2),diamond_y)
+cross = False
+score =0
+speed = 0.7
+def update():
+    global diamond_y, diamond_x, game,score,speed,diamond_color
+    
+    if not game and not paused:
+        diamond_y -= speed
+        if diamond_y < 0:
+            game = True
+            print(f"Game Over. Final Score: {score}")
+        elif diamond_y <= 30 and (catch_x <= diamond_x <= catch_x + catcher_width):
+            score += 1
+            speed+=0.2
+            print(f"Score: {score}")
+            diamond_x = random.randint(0, 500)
+            diamond_y = 750
+            diamond_color = [random.random(), random.random(), random.random()]
+    if cross:
+        game = True
+        print(f"Goodbye. Final Score: {score}")
+
+
+def move_catcher(direction):
+    global catch_x,catcher_width
+    if direction == 'right' and catch_x+catcher_width<480:
+        catch_x+=20
+        
+    elif direction == 'left' and catch_x>20:
+        catch_x-=20
+        
+def restart_game():
+    global catch_x, diamond_x, diamond_y, diamond_color, score, game_over, speed
+    print("Starting Over")
+    catch_x = 210
+    diamond_x = random.randint(0, 500)
+    diamond_y = 660
+    diamond_color = [random.random(), random.random(), random.random()]
+    score = 0
+    speed = 0.7
+    game = False
+paused = False
+
+def iterate():
+    glViewport(0, 0, 500, 750)
+    glMatrixMode(GL_PROJECTION)
+    glLoadIdentity()
+    glOrtho(0.0, 500, 0.0, 750, -1.0, 1.0)
+    glMatrixMode (GL_MODELVIEW)
+    glLoadIdentity()
+
+def mouse(button, state, x, y):
+    global cross,paused
+    
+    if button == GLUT_LEFT_BUTTON and state == GLUT_DOWN:
+
+        if 30<=x<=60 and 55<=y<=75:
+            restart_game()
+        elif 460<=x<=480 and 53<=y<=85:
+            cross = True
+        elif 250<=x<=275 and 50<=y<=85:
+            paused = not paused
+            
+    glutPostRedisplay()
+
+def showScreen():
+    global diamond_x,diamond_y
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+    glLoadIdentity()
+    iterate()
+    
+    cross_func()
+    if not paused:
+
+        pause()
+    else:
+        play()
+    back()
+    drawcatcher()
+
+    if not game:
+        
+        diamond()
+        
+
+    if not game:
+        update()
+
+        
+    if (cross == True) :
+        glutLeaveMainLoop()
+
+    glFlush()
+    glutSwapBuffers()
+
+def keyboard(key, x, y):
+    if not game and not paused:
+
+        if key == GLUT_KEY_LEFT:
+            move_catcher('left')
+        elif key == GLUT_KEY_RIGHT:
+            move_catcher('right')
+
+glutInit()
+glutInitDisplayMode(GLUT_RGBA)
+glutInitWindowSize(500, 750) #window size
+glutInitWindowPosition(0, 0)
+wind = glutCreateWindow(b"Diamond Catcher") #window name
+glutDisplayFunc(showScreen)
+glutSpecialFunc(keyboard)
+glutMouseFunc(mouse)
+glutIdleFunc(showScreen)
+
+glutMainLoop()
